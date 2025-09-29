@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Editor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .container { display: flex; height: calc(100vh - 40px); }
+        .editor { flex: 1; padding: 10px; }
+        .preview { flex: 1; padding: 10px; border-left: 1px solid #ccc; overflow-y: auto; }
+        textarea { width: 100%; height: 100%; resize: none; box-sizing: border-box; }
+        #preview-output { height: 100%; overflow-y: auto; }
+    /* Task list styling: place checkbox inline with text and remove default list bullet spacing */
+    .preview ul { list-style: none; padding-left: 0; }
+    .preview li { display: flex; align-items: center; }
+    .preview li input[type="checkbox"] { margin-right: 8px; margin-left: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="editor">
+            <h2>Markdown Input</h2>
+            <textarea id="markdown-input" placeholder="Enter your markdown here..."></textarea>
+        </div>
+        <div class="preview">
+            <h2>Preview</h2>
+            <div id="preview-output"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

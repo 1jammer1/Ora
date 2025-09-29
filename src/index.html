@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown Editor</title>
+    <style>
+        :root {
+            --bg: #0f1216;
+            --panel: #151a21;
+            --text: #e6edf3;
+            --muted: #a2adb8;
+            --border: #263041;
+            --accent: #3b82f6;
+            --accent-2: #22d3ee;
+            --shadow: 0 10px 30px rgba(0,0,0,.35);
+        }
+        :root.light {
+            --bg: #f7fafc;
+            --panel: #ffffff;
+            --text: #0b1220;
+            --muted: #384152;
+            --border: #e5e7eb;
+            --accent: #2563eb;
+            --accent-2: #0891b2;
+            --shadow: 0 10px 25px rgba(0,0,0,.10);
+        }
+
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            display: flex; flex-direction: column;
+        }
+
+        header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 16px; border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, var(--panel), color-mix(in srgb, var(--panel) 92%, transparent));
+            position: sticky; top: 0; z-index: 10; box-shadow: var(--shadow);
+        }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+        .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent); }
+        .toolbar { display: flex; gap: 8px; align-items: center; }
+        .btn {
+            background: color-mix(in srgb, var(--panel) 80%, var(--accent) 20%);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 10px; border-radius: 8px; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+            transition: transform .06s ease, background .2s ease, border-color .2s ease;
+        }
+        .btn:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+        .btn:active { transform: translateY(0); }
+        .btn.secondary { background: var(--panel); }
+
+        .workspace { flex: 1; display: grid; grid-template-rows: auto 1fr; }
+        .panes {
+            display: grid; grid-template-columns: 1fr 8px 1fr; gap: 0; height: calc(100vh - 64px);
+        }
+        .pane { background: var(--panel); border-right: 1px solid var(--border); overflow: hidden; }
+        .pane:last-child { border-right: 0; }
+        .pane-header { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--muted); display:flex; align-items:center; justify-content:space-between; }
+        .pane-body { height: calc(100% - 41px); overflow: auto; }
+        textarea {
+            width: 100%; height: 100%; border: 0; outline: none; resize: none;
+            padding: 14px; background: transparent; color: var(--text); font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        #preview-output { padding: 14px; }
+
+        /* Resizer */
+        .resizer { background: transparent; cursor: col-resize; position: relative; }
+        .resizer::after { content: ""; position: absolute; inset: 0; width: 8px; background: linear-gradient(to right, transparent 0 35%, color-mix(in srgb, var(--border) 70%, transparent) 35% 65%, transparent 65% 100%); }
+
+        /* Markdown content styles (minimal) */
+        #preview-output h1, #preview-output h2, #preview-output h3 { margin: 12px 0 8px; }
+        #preview-output p { margin: 8px 0; }
+        #preview-output pre { background: #0b0f14; padding: 12px; border-radius: 8px; overflow:auto; border:1px solid var(--border); }
+        #preview-output code { background: color-mix(in srgb, var(--panel) 85%, var(--border) 15%); padding: 2px 4px; border-radius: 4px; }
+        #preview-output table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        #preview-output th, #preview-output td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
+        #preview-output blockquote { margin: 10px 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--panel) 85%, var(--accent) 15%); }
+
+        /* Task list styling */
+        #preview-output ul { list-style: none; padding-left: 0; }
+        #preview-output li { display: flex; align-items: center; gap: 8px; }
+        #preview-output li input[type="checkbox"] { margin-left: 2px; }
+        /* Respect hidden attribute for UI elements */
+        [hidden] { display: none !important; }
+
+        /* Menu dropdown */
+        .menu-bar { position: relative; }
+        .dropdown { position: absolute; top: 36px; left: 0; min-width: 180px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; }
+        .dropdown .item { text-align: left; padding: 8px 10px; background: transparent; border: 0; color: var(--text); border-radius: 6px; cursor: pointer; }
+        .dropdown .item:hover { background: color-mix(in srgb, var(--panel) 70%, var(--accent) 30%); }
+        .dropdown hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
+
+        /* Modal */
+        .modal { position: fixed; inset: 0; display: grid; place-items: center; }
+        .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.5); }
+        .modal-card { position: relative; background: var(--panel); border:1px solid var(--border); border-radius: 12px; width: min(520px, 92vw); box-shadow: var(--shadow); overflow: hidden; }
+        .modal-header, .modal-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+        .modal-footer { border-top: 1px solid var(--border); border-bottom: 0; }
+        .modal-body { padding: 14px; }
+    </style>
+</head>
+<body>
+        <header>
+            <div class="toolbar" style="gap:16px;">
+                <div class="menu-bar">
+                    <button class="btn secondary" id="btn-file">File ▾</button>
+                    <div class="dropdown" id="file-menu" hidden>
+                        <button class="item" id="file-new">New</button>
+                        <button class="item" id="file-open">Open…</button>
+                        <button class="item" id="file-save">Save</button>
+                        <button class="item" id="file-save-as">Save As…</button>
+                        <hr />
+                        <button class="item" id="file-settings">Settings…</button>
+                    </div>
+                </div>
+            </div>
+            <div class="toolbar">
+            <button class="btn" id="btn-bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+            <button class="btn" id="btn-italic" title="Italic (Ctrl+I)"><em>I</em></button>
+            <button class="btn" id="btn-h1" title="H1">H1</button>
+            <button class="btn" id="btn-link" title="Link (Ctrl+K)">Link</button>
+            <button class="btn" id="btn-list" title="Bulleted List">• List</button>
+                    <button class="btn" id="btn-task" title="Task List">Task</button>
+                    <button class="btn" id="btn-code" title="Code Block">Code</button>
+            <button class="btn secondary" id="btn-theme" title="Toggle Theme">Theme</button>
+            <button class="btn secondary" id="btn-clear" title="Clear">Clear</button>
+        </div>
+    </header>
+
+    <main class="workspace">
+        <section class="panes" id="panes">
+            <article class="pane" id="pane-editor">
+                <div class="pane-header">Editor</div>
+                <div class="pane-body">
+                    <textarea id="markdown-input" placeholder="Write markdown here..."></textarea>
+                </div>
+            </article>
+            <div class="resizer" id="resizer" aria-hidden="true"></div>
+            <article class="pane" id="pane-preview">
+                <div class="pane-header">Preview</div>
+                <div class="pane-body">
+                    <div id="preview-output"></div>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal" hidden>
+            <div class="modal-backdrop" data-close></div>
+            <div class="modal-card">
+                <div class="modal-header">
+                    <div>Settings</div>
+                    <button class="btn secondary" data-close>×</button>
+                </div>
+                <div class="modal-body">
+                    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                        <span>Theme</span>
+                        <select id="setting-theme">
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                        </select>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;">
+                        <span>Editor Font Size</span>
+                        <select id="setting-fontsize">
+                            <option value="12">12</option>
+                            <option value="14" selected>14</option>
+                            <option value="16">16</option>
+                            <option value="18">18</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" id="settings-save">Save</button>
+                    <button class="btn secondary" data-close>Close</button>
+                </div>
+            </div>
+        </div>
+</body>
+</html>
